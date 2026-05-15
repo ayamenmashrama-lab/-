@@ -1,0 +1,1128 @@
+﻿<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>🏥 نظام المستشفى الاحترافي</title>
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#1E5F8A">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+*{
+box-sizing:border-box;
+}
+
+body{
+font-family:'Segoe UI',Tahoma,sans-serif;
+background:#f0f4f8;
+padding:15px;
+direction:rtl;
+margin:0;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+}
+
+h1{
+text-align:center;
+color:#1E5F8A;
+}
+
+.card{
+background:white;
+padding:15px;
+margin:12px 0;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+input,
+select,
+textarea{
+width:100%;
+padding:10px;
+margin:6px 0;
+border-radius:8px;
+border:1px solid #ccc;
+font-size:15px;
+}
+
+button{
+width:100%;
+padding:12px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+color:white;
+font-weight:bold;
+margin-top:5px;
+}
+
+.add-btn{
+background:#28a745;
+}
+
+.delete-btn{
+background:#dc3545;
+}
+
+.edit-btn{
+background:#fd7e14;
+}
+
+.view-btn{
+background:#007bff;
+}
+
+.print-btn{
+background:#6c757d;
+}
+
+.grid-2{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:8px;
+}
+
+.grid-3{
+display:grid;
+grid-template-columns:1fr 1fr 1fr;
+gap:8px;
+}
+
+.badge{
+background:#1E5F8A;
+color:white;
+padding:4px 10px;
+border-radius:20px;
+font-size:12px;
+}
+
+.field{
+margin:5px 0;
+font-size:14px;
+}
+
+.visit-box{
+background:#e9f5ff;
+padding:10px;
+border-radius:10px;
+margin-top:8px;
+border-right:4px solid #007bff;
+}
+
+.appointment-box{
+background:#fff8e1;
+padding:12px;
+border-radius:10px;
+margin-top:10px;
+border-right:4px solid #ff9800;
+}
+
+.status{
+display:inline-block;
+padding:4px 10px;
+border-radius:20px;
+font-size:12px;
+color:white;
+}
+
+.confirmed{
+background:#2e7d32;
+}
+
+.completed{
+background:#1565c0;
+}
+
+.cancelled{
+background:#c62828;
+}
+
+.stats{
+display:grid;
+grid-template-columns:1fr 1fr 1fr;
+gap:10px;
+margin-bottom:15px;
+}
+
+.stat-box{
+background:white;
+padding:15px;
+border-radius:12px;
+text-align:center;
+box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+.stat-box h2{
+margin:0;
+color:#1E5F8A;
+}
+
+.search-box{
+position:sticky;
+top:0;
+background:#f0f4f8;
+padding:10px 0;
+z-index:100;
+}
+
+#loading{
+text-align:center;
+padding:20px;
+display:none;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🏥 نظام المستشفى الاحترافي</h1>
+
+<!-- الإحصائيات -->
+
+<div class="stats">
+
+<div class="stat-box">
+<h2 id="patientsCount">0</h2>
+<div>إجمالي المرضى</div>
+</div>
+
+<div class="stat-box">
+<h2 id="visitsCount">0</h2>
+<div>إجمالي الزيارات</div>
+</div>
+
+<div class="stat-box">
+<h2 id="appointmentsCount">0</h2>
+<div>إجمالي المواعيد</div>
+</div>
+
+</div>
+
+<!-- إضافة مريض -->
+
+<div class="card">
+
+<h3>➕ إضافة مريض جديد</h3>
+
+<form id="patientForm">
+
+<div class="grid-2">
+
+<input id="name" placeholder="اسم المريض *">
+
+<input id="age" type="number" placeholder="العمر *">
+
+</div>
+
+<div class="grid-3">
+
+<select id="gender">
+
+<option value="">الجنس</option>
+
+<option value="ذكر">ذكر</option>
+
+<option value="أنثى">أنثى</option>
+
+</select>
+
+<input id="phone" placeholder="رقم الهاتف">
+
+<input id="blood_type" placeholder="فصيلة الدم">
+
+</div>
+
+<input id="address" placeholder="العنوان">
+
+<input id="allergies" placeholder="الحساسية">
+
+<input id="chronic_diseases" placeholder="الأمراض المزمنة">
+
+<input id="medications" placeholder="الأدوية الحالية">
+
+<input id="diagnosis" placeholder="التشخيص *">
+
+<textarea id="notes" placeholder="ملاحظات"></textarea>
+
+<button type="button"
+class="add-btn"
+onclick="addPatient()">
+
+إضافة مريض
+
+</button>
+
+</form>
+
+</div>
+
+<!-- البحث -->
+
+<div class="search-box">
+
+<input id="searchBox"
+placeholder="🔍 بحث بالاسم أو الهاتف أو التشخيص">
+
+</div>
+
+<div id="loading">
+
+جاري التحميل...
+
+</div>
+
+<div id="patients"></div>
+
+</div>
+
+<script>
+
+/* =========================
+SUPABASE
+========================= */
+
+const supabaseUrl =
+"https://umglydjnxctemxahkvva.supabase.co";
+
+const supabaseKey =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtZ2x5ZGpueGN0ZW14YWhrdnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTcwMjUsImV4cCI6MjA5Mzc5MzAyNX0.u_fmhVpmt1hqGutX3V-QP7Gx0PrA1iZz1Yle6bPCvfI";
+
+const client =
+supabase.createClient(
+supabaseUrl,
+supabaseKey
+);
+
+let allPatients=[];
+
+/* =========================
+حماية النصوص
+========================= */
+
+function safe(text){
+
+if(!text) return "-";
+
+const div=document.createElement("div");
+
+div.textContent=text;
+
+return div.innerHTML;
+
+}
+
+/* =========================
+إضافة مريض
+========================= */
+
+async function addPatient(){
+
+const name=
+document.getElementById("name").value.trim();
+
+const age=
+document.getElementById("age").value;
+
+const diagnosis=
+document.getElementById("diagnosis").value.trim();
+
+if(!name || !age || !diagnosis){
+
+alert("أدخل البيانات المطلوبة");
+
+return;
+
+}
+
+const {error}=await client
+.from("patients")
+.insert([{
+
+name:name,
+
+age:parseInt(age),
+
+gender:
+document.getElementById("gender").value,
+
+phone:
+document.getElementById("phone").value,
+
+blood_type:
+document.getElementById("blood_type").value,
+
+address:
+document.getElementById("address").value,
+
+allergies:
+document.getElementById("allergies").value,
+
+chronic_diseases:
+document.getElementById("chronic_diseases").value,
+
+medications:
+document.getElementById("medications").value,
+
+diagnosis:diagnosis,
+
+notes:
+document.getElementById("notes").value
+
+}]);
+
+if(error){
+
+alert(error.message);
+
+return;
+
+}
+
+document.getElementById("patientForm").reset();
+
+loadPatients();
+
+}
+
+/* =========================
+تحميل المرضى
+========================= */
+
+async function loadPatients(){
+
+document.getElementById("loading")
+.style.display="block";
+
+const {data,error}=await client
+.from("patients")
+.select("*")
+.order("id",{ascending:false});
+
+document.getElementById("loading")
+.style.display="none";
+
+if(error){
+
+alert(error.message);
+
+return;
+
+}
+
+allPatients=data;
+
+renderPatients(data);
+
+updateStats();
+
+}
+
+/* =========================
+عرض المرضى
+========================= */
+
+function renderPatients(data){
+
+const box=
+document.getElementById("patients");
+
+box.innerHTML="";
+
+if(data.length===0){
+
+box.innerHTML=
+"<div class='card'>لا يوجد مرضى</div>";
+
+return;
+
+}
+
+data.forEach(p=>{
+
+box.innerHTML += `
+
+<div class="card">
+
+<div style="
+display:flex;
+justify-content:space-between;
+align-items:center;
+">
+
+<h3>
+👤 ${safe(p.name)}
+</h3>
+
+<span class="badge">
+ID: ${p.id}
+</span>
+
+</div>
+
+<div class="grid-3">
+
+<div class="field">
+<b>العمر:</b>
+${p.age}
+</div>
+
+<div class="field">
+<b>الجنس:</b>
+${safe(p.gender)}
+</div>
+
+<div class="field">
+<b>فصيلة الدم:</b>
+${safe(p.blood_type)}
+</div>
+
+</div>
+
+<div class="field">
+📞 ${safe(p.phone)}
+</div>
+
+<div class="field">
+🏠 ${safe(p.address)}
+</div>
+
+<div class="field">
+⚠️ ${safe(p.allergies)}
+</div>
+
+<div class="field">
+💊 ${safe(p.chronic_diseases)}
+</div>
+
+<div class="field">
+💉 ${safe(p.medications)}
+</div>
+
+<div class="field">
+🩺 ${safe(p.diagnosis)}
+</div>
+
+<div class="field">
+📝 ${safe(p.notes)}
+</div>
+
+<div class="grid-3">
+
+<button
+class="edit-btn"
+onclick="editPatient(${p.id})">
+
+تعديل
+
+</button>
+
+<button
+class="delete-btn"
+onclick="deletePatient(${p.id})">
+
+حذف
+
+</button>
+
+<button
+class="print-btn"
+onclick="printPatient(${p.id})">
+
+طباعة
+
+</button>
+
+</div>
+
+<hr>
+
+<h3>🩺 الزيارات</h3>
+
+<input
+id="doctor-${p.id}"
+placeholder="اسم الطبيب">
+
+<input
+id="notes-${p.id}"
+placeholder="ملاحظات الزيارة">
+
+<button
+class="add-btn"
+onclick="addVisit(${p.id})">
+
+إضافة زيارة
+
+</button>
+
+<button
+class="view-btn"
+onclick="loadVisits(${p.id})">
+
+عرض الزيارات
+
+</button>
+
+<div id="visits-${p.id}"></div>
+
+<hr>
+
+<h3>📅 المواعيد</h3>
+
+<div class="grid-2">
+
+<input
+id="app-date-${p.id}"
+type="date">
+
+<input
+id="app-time-${p.id}"
+type="time">
+
+</div>
+
+<div class="grid-2">
+
+<input
+id="app-doctor-${p.id}"
+placeholder="اسم الطبيب">
+
+<select id="app-status-${p.id}">
+
+<option value="مؤكد">
+مؤكد
+</option>
+
+<option value="مكتمل">
+مكتمل
+</option>
+
+<option value="ملغي">
+ملغي
+</option>
+
+</select>
+
+</div>
+
+<textarea
+id="app-notes-${p.id}"
+placeholder="ملاحظات الموعد"></textarea>
+
+<div class="grid-2">
+
+<button
+class="add-btn"
+onclick="addAppointment(${p.id})">
+
+إضافة موعد
+
+</button>
+
+<button
+class="view-btn"
+onclick="loadAppointments(${p.id})">
+
+عرض المواعيد
+
+</button>
+
+</div>
+
+<div id="appointments-${p.id}"></div>
+
+</div>
+
+`;
+
+});
+
+}
+
+/* =========================
+بحث
+========================= */
+
+document.getElementById("searchBox")
+.addEventListener("input",function(){
+
+const value=
+this.value.toLowerCase();
+
+const filtered=
+allPatients.filter(p=>
+
+p.name.toLowerCase().includes(value)
+
+||
+
+(p.phone || "")
+.toLowerCase()
+.includes(value)
+
+||
+
+(p.diagnosis || "")
+.toLowerCase()
+.includes(value)
+
+);
+
+renderPatients(filtered);
+
+});
+
+/* =========================
+حذف مريض
+========================= */
+
+async function deletePatient(id){
+
+if(!confirm("حذف المريض؟"))
+return;
+
+await client
+.from("visits")
+.delete()
+.eq("patient_id",id);
+
+await client
+.from("appointments")
+.delete()
+.eq("patient_id",id);
+
+const {error}=await client
+.from("patients")
+.delete()
+.eq("id",id);
+
+if(error){
+
+alert(error.message);
+
+return;
+
+}
+
+loadPatients();
+
+}
+
+/* =========================
+تعديل
+========================= */
+
+async function editPatient(id){
+
+const p=
+allPatients.find(x=>x.id===id);
+
+const newName=
+prompt("الاسم",p.name);
+
+if(!newName) return;
+
+const newDiagnosis=
+prompt("التشخيص",p.diagnosis);
+
+const {error}=await client
+.from("patients")
+.update({
+
+name:newName,
+
+diagnosis:newDiagnosis
+
+})
+.eq("id",id);
+
+if(error){
+
+alert(error.message);
+
+return;
+
+}
+
+loadPatients();
+
+}
+
+/* =========================
+إضافة زيارة
+========================= */
+
+async function addVisit(id){
+
+const doctor=
+document.getElementById(`doctor-${id}`)
+.value;
+
+const notes=
+document.getElementById(`notes-${id}`)
+.value;
+
+if(!doctor || !notes){
+
+alert("أدخل بيانات الزيارة");
+
+return;
+
+}
+
+const {error}=await client
+.from("visits")
+.insert([{
+
+patient_id:id,
+
+doctor:doctor,
+
+notes:notes,
+
+created_at:
+new Date().toISOString()
+
+}]);
+
+if(error){
+
+alert(error.message);
+
+return;
+
+}
+
+document.getElementById(`doctor-${id}`)
+.value="";
+
+document.getElementById(`notes-${id}`)
+.value="";
+
+loadVisits(id);
+
+updateStats();
+
+}
+
+/* =========================
+عرض الزيارات
+========================= */
+
+async function loadVisits(id){
+
+const {data}=await client
+.from("visits")
+.select("*")
+.eq("patient_id",id)
+.order("id",{ascending:false});
+
+const box=
+document.getElementById(`visits-${id}`);
+
+box.innerHTML="";
+
+if(data.length===0){
+
+box.innerHTML=
+"<div class='visit-box'>لا توجد زيارات</div>";
+
+return;
+
+}
+
+data.forEach(v=>{
+
+box.innerHTML += `
+
+<div class="visit-box">
+
+👨‍⚕️ ${safe(v.doctor)}
+
+<br><br>
+
+📝 ${safe(v.notes)}
+
+</div>
+
+`;
+
+});
+
+}
+
+/* =========================
+إضافة موعد
+========================= */
+
+async function addAppointment(id){
+
+const doctor=
+document.getElementById(`app-doctor-${id}`)
+.value;
+
+const date=
+document.getElementById(`app-date-${id}`)
+.value;
+
+const time=
+document.getElementById(`app-time-${id}`)
+.value;
+
+const status=
+document.getElementById(`app-status-${id}`)
+.value;
+
+const notes=
+document.getElementById(`app-notes-${id}`)
+.value;
+
+if(!doctor || !date || !time){
+
+alert("أدخل بيانات الموعد");
+
+return;
+
+}
+
+const {error}=await client
+.from("appointments")
+.insert([{
+
+patient_id:id,
+
+doctor:doctor,
+
+appointment_date:date,
+
+appointment_time:time,
+
+status:status,
+
+notes:notes,
+
+created_at:
+new Date().toISOString()
+
+}]);
+
+if(error){
+
+alert(error.message);
+
+return;
+
+}
+
+loadAppointments(id);
+
+updateStats();
+
+}
+
+/* =========================
+عرض المواعيد
+========================= */
+
+async function loadAppointments(id){
+
+const {data}=await client
+.from("appointments")
+.select("*")
+.eq("patient_id",id)
+.order("id",{ascending:false});
+
+const box=
+document.getElementById(`appointments-${id}`);
+
+box.innerHTML="";
+
+if(data.length===0){
+
+box.innerHTML=
+"<div class='appointment-box'>لا توجد مواعيد</div>";
+
+return;
+
+}
+
+data.forEach(a=>{
+
+let statusClass="confirmed";
+
+if(a.status==="مكتمل")
+statusClass="completed";
+
+if(a.status==="ملغي")
+statusClass="cancelled";
+
+box.innerHTML += `
+
+<div class="appointment-box">
+
+📅 ${a.appointment_date}
+
+<br><br>
+
+⏰ ${a.appointment_time}
+
+<br><br>
+
+👨‍⚕️ ${safe(a.doctor)}
+
+<br><br>
+
+📝 ${safe(a.notes)}
+
+<br><br>
+
+<span class="status ${statusClass}">
+${a.status}
+</span>
+
+</div>
+
+`;
+
+});
+
+}
+
+/* =========================
+الإحصائيات
+========================= */
+
+async function updateStats(){
+
+document.getElementById("patientsCount")
+.innerText=
+allPatients.length;
+
+const {data:visits}=
+await client
+.from("visits")
+.select("*");
+
+document.getElementById("visitsCount")
+.innerText=
+visits.length;
+
+const {data:appointments}=
+await client
+.from("appointments")
+.select("*");
+
+document.getElementById("appointmentsCount")
+.innerText=
+appointments.length;
+
+}
+
+/* =========================
+طباعة
+========================= */
+
+function printPatient(id){
+
+const p=
+allPatients.find(x=>x.id===id);
+
+const w=
+window.open("","","width=800,height=800");
+
+w.document.write(`
+
+<html dir="rtl">
+
+<head>
+
+<title>
+ملف ${p.name}
+</title>
+
+</head>
+
+<body style="
+font-family:Arial;
+padding:20px;
+">
+
+<h1>
+🏥 ملف المريض
+</h1>
+
+<hr>
+
+<p>
+<b>الاسم:</b>
+${safe(p.name)}
+</p>
+
+<p>
+<b>العمر:</b>
+${p.age}
+</p>
+
+<p>
+<b>الجنس:</b>
+${safe(p.gender)}
+</p>
+
+<p>
+<b>الهاتف:</b>
+${safe(p.phone)}
+</p>
+
+<p>
+<b>التشخيص:</b>
+${safe(p.diagnosis)}
+</p>
+
+<p>
+<b>الأدوية:</b>
+${safe(p.medications)}
+</p>
+
+<p>
+<b>الحساسية:</b>
+${safe(p.allergies)}
+</p>
+
+<p>
+<b>الملاحظات:</b>
+${safe(p.notes)}
+</p>
+
+</body>
+
+</html>
+
+`);
+
+w.print();
+
+}
+
+/* =========================
+تشغيل أولي
+========================= */
+
+loadPatients();
+
+</script>
+
+</body>
+</html>
